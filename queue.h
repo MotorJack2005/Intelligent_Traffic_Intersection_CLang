@@ -45,11 +45,11 @@ void enqueue(struct _QUEUE_ *queue, void *data) {
 }
 
 
-void dequeue(_QUEUE_ *queue) {
+void dequeue(struct _QUEUE_ *queue) {
     if(queue->first==NULL && queue->last==NULL) {
         return;
     }
-    _NODE_QUEUE_ *temp = queue->first;
+    struct _NODE_QUEUE_ *temp = queue->first;
     queue->first = queue->first->next;
     if(queue->first==NULL) {
         queue->last = NULL;

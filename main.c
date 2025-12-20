@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "queue.h"
+#include "stack.h"
 
 
 //   _________                         .___             _________            .___.__                 ___________       __                            .__               
@@ -27,7 +28,8 @@ enum OUTPUT_PROMPT {
 
 enum SIGNAL_STRATEGY {
     ROUND_ROBIN,
-    LENGTH_BASED
+    LENGTH_BASED,
+    EMERGENCY_PREEMPT
 };
 
 enum VEHICLE_TYPE {
@@ -111,7 +113,7 @@ struct _INTERSECTION_ *create_intersection(unsigned int tick, struct _LANE_ **la
 
 
 
-int main(int argc, char **argv) {
+int main() {
 
 
     return 0;
