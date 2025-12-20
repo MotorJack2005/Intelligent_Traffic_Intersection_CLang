@@ -3,14 +3,12 @@
 #include <stdlib.h>
 
 
-struct _NODE_QUEUE_ {
-    void *data;
-    struct _NODE_QUEUE_  *next; 
-};
 
 struct _QUEUE_ {
-    struct _NODE_QUEUE_ *first;
-    struct _NODE_QUEUE_ *last;
+    struct _NODE_QUEUE_ {
+        void *data;
+        struct _NODE_QUEUE_  *next; 
+    }*first, *last;
 };
 
 

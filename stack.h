@@ -3,13 +3,12 @@
 
 #include <stdlib.h>
 
-struct _NODE_STACK_ {
-    void *data;
-    struct _NODE_STACK_ *next;
-};
-
 struct _STACK_ {
-    struct _NODE_STACK_ *head;
+    struct _NODE_STACK_ {
+        void *data;
+        struct _NODE_STACK_ *next;
+    }*head;
+    
 };
 
 struct _NODE_STACK_ *create_node_stack(void *data) {
