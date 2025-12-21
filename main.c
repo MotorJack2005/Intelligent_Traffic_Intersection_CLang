@@ -3,6 +3,7 @@
 #include <string.h>
 #include "queue.h"
 #include "stack.h"
+#include "priority_queue.h"
 
 
 // ░██████╗███████╗███╗░░██╗░█████╗░██████╗░░█████╗░░██████╗
