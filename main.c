@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "queue.h"
 #include "stack.h"
 
@@ -25,7 +26,8 @@ enum COMMANDS {
     TICK,
     EMERGENCY_PREEMPT,
     STATUS,
-    END
+    END,
+    INVALID
 };
 
 enum OUTPUT_PROMPT {
@@ -100,6 +102,108 @@ struct _INTERSECTION_ *create_intersection(unsigned int tick, struct _LANE_ **la
     return s;
 }
 
+
+enum COMMANDS str_to_command(char *str) {
+    char *upper_str = strupr(str);
+         if(strcmp(upper_str, "ARRIVE")              == 0) return ARRIVE;
+    else if(strcmp(upper_str, "SET_SIGNAL_STRATEGY") == 0) return SET_SIGNAL_STRATEGY;
+    else if(strcmp(upper_str, "TICK")                == 0) return TICK;
+    else if(strcmp(upper_str, "EMERGENCY_PREEMPT")   == 0) return EMERGENCY_PREEMPT;
+    else if(strcmp(upper_str, "STATUS")              == 0) return STATUS;
+    else if(strcmp(upper_str, "END")                 == 0) return END;
+    else                                                   return INVALID;
+}
+
+
+char **verify_input(char *rgstr, int s, char *error_msg) {
+    char **inputs = (char**) malloc(s * sizeof(char*));
+    for(int i=0;i<s;i++) {
+        rgstr = strtok(NULL, " ");
+        if(rgstr) {
+            inputs[i] = rgstr;
+        }
+        else {
+            printf("%s\n", error_msg);
+            return NULL;
+        }
+    }
+    return inputs;
+}
+
+
+//PANG DEBUG PURPOSES RANI DELETE NI KUNG HUMANA !!
+void display(char *cmd, char **registers, int s) {
+    printf("COMMAND: %s\n", cmd);
+
+    for(int i=0; i<s;i++) {
+        printf("%s\n", registers[i]);
+    }
+    printf("\n");
+}
+
+
+void initiate() {
+    char input[256];
+    fgets(input, sizeof(input), stdin);
+    input[strcspn(input, "\n")] = 0;
+
+    char *string_register = strtok(input," ");
+    if(!string_register) return initiate();
+
+    enum COMMANDS cmd = str_to_command(string_register);
+
+    switch(cmd) {
+        case ARRIVE: {
+            char **arrive_registers = verify_input(string_register, 4, "ARRIVE <Lane> <VehicleID> <Type> <t>");
+
+            if(arrive_registers != NULL) {
+                //RUN COMMAND IF INPUT CORRECT !
+                display("ARRIVE", arrive_registers, 4);
+            }
+            break;
+        }
+        case SET_SIGNAL_STRATEGY:{
+            char **strategy_registers = verify_input(string_register, 1, "SET_SIGNAL_STRATEGY <strategy>");
+
+            if(strategy_registers != NULL) {
+                //RUN COMMAND IF INPUT CORRECT !
+                display("SET_SIGNAL_STRATEGY", strategy_registers, 1);
+            }
+            break;
+        }
+
+        case TICK: {
+            char **tick_registers = verify_input(string_register, 1, "TICK <t>");
+
+            if(tick_registers != NULL) {
+                // RUN COMMAND IF INPUT CORRECT !
+                display("TICK", tick_registers, 1);
+            }
+            break;
+        }
+
+        case EMERGENCY_PREEMPT: {
+            char **preempt_registers = verify_input(string_register, 1, "EMERGENCY_PREEMPT <VehicleID> <t>");
+
+            if(preempt_registers != NULL) {
+                // RUN COMMAND IF INPUT CORRECT !
+                display("EMERGENCY_PREEMPT", preempt_registers, 1);
+            }
+            break;
+        }
+        case STATUS: {
+            // RUN COMMAND IF INPUT CORRECT !
+        }
+        case END: {
+            return;
+        }
+    }
+    initiate();
+
+}
+
+
+
 // ⠀⠀⢀⣤⣶⣶⣤⣄⡀
 // ⠀⢀⣿⣿⣿⣿⣿⣿⣿⡆
 // ⠀⠸⣿⣿⣿⣿⣿⡟⡟⡗ ⣿⠉⣿⠉⣿⡏⠹⡏⢹⡏⢹⣿⣿⠉⣿⠉⣿⡟⢋⠛⣿⠉⡟⢉⡏⠹⠏⣹⣿
@@ -124,9 +228,8 @@ struct _INTERSECTION_ *create_intersection(unsigned int tick, struct _LANE_ **la
 // ⠀⠀⠀⠀⠀⢿⡟
 
 
-
 int main() {
-
+    initiate();
 
     return 0;
 }
