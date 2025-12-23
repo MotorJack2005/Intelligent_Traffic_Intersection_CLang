@@ -5,6 +5,7 @@
 
 
 struct _QUEUE_ {
+    int total_size;
     struct _NODE_QUEUE_ {
         void *data;
         struct _NODE_QUEUE_  *next; 
@@ -26,11 +27,15 @@ struct _QUEUE_ *create_queue() {
         perror("FAILED TO ALLOCATE QUEUE!");
         exit(EXIT_FAILURE);
     }
+    new_queue->total_size = 0;
     new_queue->last = NULL;
     new_queue->first = new_queue->last;
     return new_queue;
 }
 
+void *peek_q(struct _QUEUE_ *q) {
+    return q->first->data;
+}
 
 void enqueue(struct _QUEUE_ *queue, void *data) {
     struct _NODE_QUEUE_ *new_node_queue = create_node_queue(data);
@@ -40,6 +45,7 @@ void enqueue(struct _QUEUE_ *queue, void *data) {
     }
     queue->last->next = new_node_queue;
     queue->last = new_node_queue;
+    queue->total_size++;
 }
 
 
@@ -52,6 +58,7 @@ void dequeue(struct _QUEUE_ *queue) {
     if(queue->first==NULL) {
         queue->last = NULL;
     }
+    queue->total_size--;
     free(temp);
 }
 

@@ -29,7 +29,7 @@ struct _STACK_ *create_stack() {
 }
 
 void *peek(struct _STACK_ *s) {
-    return s->head;
+    return s->head->data;
 }
 
 void push(struct _STACK_ *s, void *data) {

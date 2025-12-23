@@ -67,7 +67,7 @@ void pop_q(struct _PRIORITY_QUEUE_ *p_q) {
     free (temp);
 }
 
-struct _NODE_ *peek_q(struct _PRIORITY_QUEUE_ *p_q) {
+struct _NODE_ *peek_pq(struct _PRIORITY_QUEUE_ *p_q) {
     return p_q->head;
 }
 

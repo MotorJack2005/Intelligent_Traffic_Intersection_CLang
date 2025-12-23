@@ -4,6 +4,7 @@
 #include "queue.h"
 #include "stack.h"
 #include "priority_queue.h"
+#include "linkedlist.h"
 
 
 // ░██████╗███████╗███╗░░██╗░█████╗░██████╗░░█████╗░░██████╗
@@ -27,8 +28,7 @@ enum COMMANDS {
     TICK,
     EMERGENCY_PREEMPT,
     STATUS,
-    END,
-    INVALID
+    END
 };
 
 enum OUTPUT_PROMPT {
@@ -41,7 +41,8 @@ enum OUTPUT_PROMPT {
 struct _VEHICLE_ {
     char *id;
     unsigned int lane;
-    unsigned int t;
+    unsigned int arrival_t;
+    unsigned int final_t;
 
     enum DIRECTION{
         LEFT,
@@ -58,52 +59,48 @@ struct _VEHICLE_ {
 
 struct _LANE_ {
 
-    enum LANE_TYPE {
-        STANDARD_LANE,
-        EMERGENCY_LANE
-    }type;
-
     struct _QUEUE_ *queue;
-    struct _STACK_ *stack;
 };
 
 struct _INTERSECTION_ {
-    unsigned int tick;
+    // unsigned int tick;
+    struct _QUEUE_ *ticks;
     struct _LANE_ *lanes[4];
-    struct _LANE_ *emergency_lane;
+    struct _STACK_ *emergency_lane;
+    struct _LINKEDLIST_ *logs;
     enum SIGNAL_STRATEGY {
         ROUND_ROBIN,
         LENGTH_BASED,
-        EMERGENCY_FIRST
     }strat;
 };
 
 
-struct _VEHICLE_ *create_vehicle(unsigned int lane, char *id, unsigned int t, enum VEHICLE_TYPE type) {
+struct _VEHICLE_ *create_vehicle(unsigned int lane, char *id, enum VEHICLE_TYPE type, unsigned int a_t) {
     struct _VEHICLE_ *v = (struct _VEHICLE_*) malloc(sizeof(struct _VEHICLE_));
     v->id = id;
     v->lane = lane;
-    v->t = t;
+    v->arrival_t = a_t;
     v->type = type;
     return v;
 }
 
 
-struct _LANE_ *create_lane(enum LANE_TYPE type) {
+struct _LANE_ *create_lane() {
     struct _LANE_ *l = (struct _LANE_*) malloc(sizeof(struct _LANE_));
-    switch(type) {
-        case STANDARD_LANE: {
-            l->stack = create_stack();
-            l->queue = NULL;
-            break;
-        }
-        case EMERGENCY_LANE: {
-            l->queue = create_queue();
-            l->stack = NULL;
-            break;
-        }
+    l->queue = create_queue();
+    // switch(type) {
+    //     case STANDARD_LANE: {
+    //         l->queue = create_queue();
+    //         l->stack = NULL;
+    //         break;
+    //     }
+    //     case EMERGENCY_LANE: {
+    //         l->stack = create_stack();
+    //         l->queue = NULL;
+    //         break;
+    //     }
             
-    }
+    // }
     return l;
 }
 
@@ -112,10 +109,12 @@ struct _INTERSECTION_ *create_intersection() {
     struct _INTERSECTION_ *s = (struct _INTERSECTION_*) malloc(sizeof(struct _INTERSECTION_));
 
     for(int i=0;i<4;i++) {
-        s->lanes[i] = create_lane(STANDARD_LANE);
+        s->lanes[i] = create_lane();
     }
-    s->emergency_lane = create_lane(EMERGENCY_LANE);
-    s->tick = 0;
+    s->emergency_lane = create_stack();
+
+    s->ticks = create_queue();
+    s->logs = create_list();
     return s;
 }
 
@@ -128,7 +127,6 @@ enum COMMANDS str_to_command(char *str) {
     else if(strcmp(upper_str, "EMERGENCY_PREEMPT")   == 0) return EMERGENCY_PREEMPT;
     else if(strcmp(upper_str, "STATUS")              == 0) return STATUS;
     else if(strcmp(upper_str, "END")                 == 0) return END;
-    else                                                   return INVALID;
 }
 
 enum VEHICLE_TYPE str_to_vehicle(char *str) {
@@ -142,14 +140,12 @@ enum SIGNAL_STRATEGY str_to_strategy(char *str) {
     char *upper_str = strupr(str);
          if(strcmp(upper_str, "ROUND_ROBIN")      == 0) return ROUND_ROBIN;
     else if(strcmp(upper_str, "LENGTH_BASED")     == 0) return LENGTH_BASED;
-    else if(strcmp(upper_str, "EMERGENCY_FIRST")  == 0) return EMERGENCY_FIRST;
 }
 
 char *strategy_to_str(enum SIGNAL_STRATEGY strat) {
     switch(strat) {
         case ROUND_ROBIN:       return "ROUND_ROBIN";
         case LENGTH_BASED:      return "LENGTH_BASED";
-        case EMERGENCY_FIRST:   return "EMERGENCY_FIRST";
     }
     return "";
 }
@@ -190,7 +186,57 @@ void display_queue(struct _QUEUE_ *q) {
     printf("NULL\n");
 
 }
+void display_vehicle(struct _VEHICLE_ *v) {
+    printf("%s %d %d\n", v->id, v->lane, v->final_t);
+}
 
+void round_robin(struct _INTERSECTION_ *junction) {
+    struct _QUEUE_ *tick = junction->ticks;
+    // struct _STACK_ *stack = junction->emergency_lane;
+    int x=1;
+    while (tick->first != NULL) {
+        struct _QUEUE_ *lane = junction->lanes[x-1]->queue;
+        struct _VEHICLE_ *v = (struct _VEHICLE_*) peek_q(lane);
+        v->final_t = (unsigned int) peek_q(tick);
+        add_element(junction->logs, v);
+        dequeue(lane);
+        x = (x %= 4) + 1;
+
+        dequeue(tick);
+    }
+}
+
+void display_logs(struct _LINKEDLIST_ *l) {
+    struct _LIST_NODE_ *ptr = l->head;
+    while(ptr!=NULL) {
+        printf("PASS ");
+        display_vehicle((struct _VEHICLE_*)ptr->data);
+        ptr=ptr->next;
+    }
+}
+
+void simulate(struct _INTERSECTION_ *junction, enum SIGNAL_STRATEGY strategy) {
+    switch(strategy) {
+
+        case ROUND_ROBIN: {
+            round_robin(junction);
+            break;
+        }
+        case LENGTH_BASED: {
+            break;
+        }
+
+    }
+}
+
+char *vehicle_to_str(enum VEHICLE_TYPE v) {
+    switch (v) {
+        case CAR: return "CAR";
+        case BUS: return "BUS";
+        case EMERGENCY: return "EMERGENCY";
+    }
+    return "";
+}
 
 void initiate(struct _INTERSECTION_ *junction) {
     char input[256];
@@ -211,11 +257,15 @@ void initiate(struct _INTERSECTION_ *junction) {
                 //RUN COMMAND IF INPUT CORRECT !
                 struct _VEHICLE_ *new_vehicle = create_vehicle(lane,
                                                                strupr(arrive_registers[1]),
-                                                               atoi(arrive_registers[2]),
-                                                               str_to_vehicle(arrive_registers[3])
-                                                              );
-                enqueue(junction->lanes[lane-1]->queue, new_vehicle);
-                display("ARRIVE", arrive_registers, 4);
+                                                               str_to_vehicle(arrive_registers[2]),
+                                                               atoi(arrive_registers[3]));
+                if(new_vehicle->type == EMERGENCY) {
+                    push(junction->emergency_lane, new_vehicle);
+                }
+                else {
+                    enqueue(junction->lanes[lane-1]->queue, new_vehicle);
+                }
+                
             }
             break;
         }
@@ -235,17 +285,23 @@ void initiate(struct _INTERSECTION_ *junction) {
 
             if(tick_registers != NULL) {
                 // RUN COMMAND IF INPUT CORRECT !
+                int tick = atoi(tick_registers[0]);
+                enqueue(junction->ticks, (int) tick);
                 display("TICK", tick_registers, 1);
             }
             break;
         }
 
         case EMERGENCY_PREEMPT: {
-            char **preempt_registers = verify_input(string_register, 1, "EMERGENCY_PREEMPT <VehicleID> <t>");
+            char **preempt_registers = verify_input(string_register, 2, "EMERGENCY_PREEMPT <VehicleID> <t>");
 
             if(preempt_registers != NULL) {
                 // RUN COMMAND IF INPUT CORRECT !
-                display("EMERGENCY_PREEMPT", preempt_registers, 1);
+                int t = atoi(preempt_registers[1]);
+                struct _VEHICLE_ *v = (struct _VEHICLE_*) peek(junction->emergency_lane);
+                v->final_t = t;
+                add_element(junction->logs, v);
+                pop(junction->emergency_lane);
             }
             break;
         }
@@ -258,6 +314,8 @@ void initiate(struct _INTERSECTION_ *junction) {
             display_queue(junction->lanes[3]->queue);
         }
         case END: {
+            simulate(junction, junction->strat);
+            display_logs(junction->logs);
             return;
         }
     }
@@ -290,10 +348,9 @@ void initiate(struct _INTERSECTION_ *junction) {
 // ⠀⠀⠀⠀⠸⣿⡿⠉⠁
 // ⠀⠀⠀⠀⠀⢿⡟
 
-
 int main() {
-    struct _INTERSECTION_ *new_junction = create_intersection();
-    initiate(new_junction);
+
+    initiate(create_intersection());
 
     return 0;
 }
