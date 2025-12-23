@@ -35,7 +35,7 @@ struct _PRIORITY_QUEUE_ *create_priority_queue() {
     return p_q;    
 }
 
-void push_q(struct _PRIORITY_QUEUE_ *p_q, struct _QUEUE_ *q, int priority) {
+void push_pq(struct _PRIORITY_QUEUE_ *p_q, struct _QUEUE_ *q, int priority) {
     struct _NODE_ *head = p_q->head;
     struct _NODE_ *ptr = p_q->head;
     struct _NODE_ *temp = create_priority_node(q, priority);
@@ -45,13 +45,13 @@ void push_q(struct _PRIORITY_QUEUE_ *p_q, struct _QUEUE_ *q, int priority) {
         return;
     }
 
-    if(ptr->p > priority) {
+    if(ptr->p < priority) {
         temp->next = p_q->head;
         p_q->head = temp;
     }
 
     else {
-        while(head->next != NULL && head->next->p < priority) {
+        while(head->next != NULL && head->next->p > priority) {
             head=head->next;
         }
         temp->next = head->next;
@@ -61,14 +61,14 @@ void push_q(struct _PRIORITY_QUEUE_ *p_q, struct _QUEUE_ *q, int priority) {
 }
 
 
-void pop_q(struct _PRIORITY_QUEUE_ *p_q) {
+void pop_pq(struct _PRIORITY_QUEUE_ *p_q) {
     struct _NODE_ *temp = p_q->head;
     p_q->head = p_q->head->next;
     free (temp);
 }
 
-struct _NODE_ *peek_pq(struct _PRIORITY_QUEUE_ *p_q) {
-    return p_q->head;
+struct _QUEUE_ *peek_pq(struct _PRIORITY_QUEUE_ *p_q) {
+    return p_q->head->queue;
 }
 
 void display_test(struct _PRIORITY_QUEUE_ *p_q) {

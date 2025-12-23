@@ -63,8 +63,7 @@ struct _LANE_ {
 };
 
 struct _INTERSECTION_ {
-    // unsigned int tick;
-    struct _QUEUE_ *ticks;
+    int lane_x;
     struct _LANE_ *lanes[4];
     struct _STACK_ *emergency_lane;
     struct _LINKEDLIST_ *logs;
@@ -88,19 +87,6 @@ struct _VEHICLE_ *create_vehicle(unsigned int lane, char *id, enum VEHICLE_TYPE 
 struct _LANE_ *create_lane() {
     struct _LANE_ *l = (struct _LANE_*) malloc(sizeof(struct _LANE_));
     l->queue = create_queue();
-    // switch(type) {
-    //     case STANDARD_LANE: {
-    //         l->queue = create_queue();
-    //         l->stack = NULL;
-    //         break;
-    //     }
-    //     case EMERGENCY_LANE: {
-    //         l->stack = create_stack();
-    //         l->queue = NULL;
-    //         break;
-    //     }
-            
-    // }
     return l;
 }
 
@@ -112,8 +98,7 @@ struct _INTERSECTION_ *create_intersection() {
         s->lanes[i] = create_lane();
     }
     s->emergency_lane = create_stack();
-
-    s->ticks = create_queue();
+    s->lane_x = 1;
     s->logs = create_list();
     return s;
 }
@@ -186,24 +171,48 @@ void display_queue(struct _QUEUE_ *q) {
     printf("NULL\n");
 
 }
+
+
 void display_vehicle(struct _VEHICLE_ *v) {
     printf("%s %d %d\n", v->id, v->lane, v->final_t);
 }
 
-void round_robin(struct _INTERSECTION_ *junction) {
-    struct _QUEUE_ *tick = junction->ticks;
-    // struct _STACK_ *stack = junction->emergency_lane;
-    int x=1;
-    while (tick->first != NULL) {
-        struct _QUEUE_ *lane = junction->lanes[x-1]->queue;
-        struct _VEHICLE_ *v = (struct _VEHICLE_*) peek_q(lane);
-        v->final_t = (unsigned int) peek_q(tick);
-        add_element(junction->logs, v);
-        dequeue(lane);
-        x = (x %= 4) + 1;
+void round_robin(struct _INTERSECTION_ *junction, int tick) {
 
-        dequeue(tick);
+    int *x= &(junction->lane_x);
+
+    struct _QUEUE_ *lane = junction->lanes[(*x)-1]->queue;
+    struct _VEHICLE_ *v = (struct _VEHICLE_*) peek_q(lane);
+    v->final_t = tick;
+
+    add_element(junction->logs, v);
+    dequeue(lane);
+
+    *x %= 4;
+}
+
+void length_based(struct _INTERSECTION_ *junction, int tick) {
+    struct _PRIORITY_QUEUE_ *p_q = create_priority_queue();
+    for(int i=0; i<4;i++) {
+        if(junction->lanes[i]->queue->first != NULL)
+            push_pq(p_q, junction->lanes[i]->queue, junction->lanes[i]->queue->total_size);
     }
+    if(peek_pq(p_q)!=NULL) {
+
+        struct _QUEUE_ *q = (struct _QUEUE_*) peek_pq(p_q);
+
+        if (peek_q(q)!=NULL) {
+            struct _VEHICLE_ *v = (struct _VEHICLE_*) peek_q(q);
+            v->final_t = tick;
+            add_element(junction->logs, v);
+            dequeue(q);
+
+        }
+        else {            
+            pop_pq(p_q);
+        }        
+    }
+    
 }
 
 void display_logs(struct _LINKEDLIST_ *l) {
@@ -215,27 +224,19 @@ void display_logs(struct _LINKEDLIST_ *l) {
     }
 }
 
-void simulate(struct _INTERSECTION_ *junction, enum SIGNAL_STRATEGY strategy) {
+void simulate(struct _INTERSECTION_ *junction, enum SIGNAL_STRATEGY strategy, int tick) {
     switch(strategy) {
 
         case ROUND_ROBIN: {
-            round_robin(junction);
+            round_robin(junction,tick);
             break;
         }
         case LENGTH_BASED: {
+            length_based(junction, tick);
             break;
         }
 
     }
-}
-
-char *vehicle_to_str(enum VEHICLE_TYPE v) {
-    switch (v) {
-        case CAR: return "CAR";
-        case BUS: return "BUS";
-        case EMERGENCY: return "EMERGENCY";
-    }
-    return "";
 }
 
 void initiate(struct _INTERSECTION_ *junction) {
@@ -275,7 +276,7 @@ void initiate(struct _INTERSECTION_ *junction) {
             if(strategy_registers != NULL) {
                 //RUN COMMAND IF INPUT CORRECT !
                 junction->strat = str_to_strategy(strategy_registers[0]);
-                display("SET_SIGNAL_STRATEGY", strategy_registers, 1);
+                
             }
             break;
         }
@@ -286,8 +287,7 @@ void initiate(struct _INTERSECTION_ *junction) {
             if(tick_registers != NULL) {
                 // RUN COMMAND IF INPUT CORRECT !
                 int tick = atoi(tick_registers[0]);
-                enqueue(junction->ticks, (int) tick);
-                display("TICK", tick_registers, 1);
+                simulate(junction, junction->strat, tick);
             }
             break;
         }
@@ -314,7 +314,6 @@ void initiate(struct _INTERSECTION_ *junction) {
             display_queue(junction->lanes[3]->queue);
         }
         case END: {
-            simulate(junction, junction->strat);
             display_logs(junction->logs);
             return;
         }
