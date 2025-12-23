@@ -182,13 +182,15 @@ void round_robin(struct _INTERSECTION_ *junction, int tick) {
     int *x= &(junction->lane_x);
 
     struct _QUEUE_ *lane = junction->lanes[(*x)-1]->queue;
-    struct _VEHICLE_ *v = (struct _VEHICLE_*) peek_q(lane);
-    v->final_t = tick;
+    display_queue(lane);
+    if(lane != NULL && lane->first!=NULL) {
+        struct _VEHICLE_ *v = (struct _VEHICLE_*) peek_q(lane);
+        v->final_t = tick;
 
-    add_element(junction->logs, v);
-    dequeue(lane);
-
-    *x %= 4;
+        add_element(junction->logs, v);
+        dequeue(lane);
+    }
+    *x=(*x %= 4) + 1;
 }
 
 void length_based(struct _INTERSECTION_ *junction, int tick) {
@@ -197,11 +199,11 @@ void length_based(struct _INTERSECTION_ *junction, int tick) {
         if(junction->lanes[i]->queue->first != NULL)
             push_pq(p_q, junction->lanes[i]->queue, junction->lanes[i]->queue->total_size);
     }
-    if(peek_pq(p_q)!=NULL) {
-
+    if(p_q->head!=NULL) {
+        
         struct _QUEUE_ *q = (struct _QUEUE_*) peek_pq(p_q);
 
-        if (peek_q(q)!=NULL) {
+        if (q->first!=NULL) {
             struct _VEHICLE_ *v = (struct _VEHICLE_*) peek_q(q);
             v->final_t = tick;
             add_element(junction->logs, v);
@@ -218,8 +220,10 @@ void length_based(struct _INTERSECTION_ *junction, int tick) {
 void display_logs(struct _LINKEDLIST_ *l) {
     struct _LIST_NODE_ *ptr = l->head;
     while(ptr!=NULL) {
+        struct _VEHICLE_ *v = (struct _VEHICLE_*)ptr->data;
+        if(v->type == EMERGENCY) printf("EMERGENCY ");
         printf("PASS ");
-        display_vehicle((struct _VEHICLE_*)ptr->data);
+        display_vehicle(v);
         ptr=ptr->next;
     }
 }
@@ -314,6 +318,7 @@ void initiate(struct _INTERSECTION_ *junction) {
             display_queue(junction->lanes[3]->queue);
         }
         case END: {
+            printf("\n");
             display_logs(junction->logs);
             return;
         }
