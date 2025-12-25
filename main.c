@@ -185,10 +185,14 @@ void round_robin(struct _INTERSECTION_ *junction, int tick) {
     display_queue(lane);
     if(lane != NULL && lane->first!=NULL) {
         struct _VEHICLE_ *v = (struct _VEHICLE_*) peek_q(lane);
-        v->final_t = tick;
+        if(v->arrival_t <= tick) {
+            v->final_t = tick;
 
-        add_element(junction->logs, v);
-        dequeue(lane);
+            add_element(junction->logs, v);
+            dequeue(lane);
+        }
+        
+        
     }
     *x=(*x %= 4) + 1;
 }
@@ -205,9 +209,12 @@ void length_based(struct _INTERSECTION_ *junction, int tick) {
 
         if (q->first!=NULL) {
             struct _VEHICLE_ *v = (struct _VEHICLE_*) peek_q(q);
-            v->final_t = tick;
-            add_element(junction->logs, v);
-            dequeue(q);
+            if(v->arrival_t <= tick) {
+                v->final_t = tick;
+                add_element(junction->logs, v);
+                dequeue(q);
+            }
+            
 
         }
         else {            
