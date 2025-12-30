@@ -295,7 +295,7 @@ void simulate(struct _INTERSECTION_ *junction, enum SIGNAL_STRATEGY strategy, in
 
     }
 }
-int i=0;
+// int i=0;
 
 // char inputs[22][256] = {
 //     {"arrive 1 c1 car 0"},
@@ -358,7 +358,6 @@ void initiate(struct _INTERSECTION_ *junction) {
     if(!string_register) return initiate(junction);
 
     enum COMMANDS cmd = str_to_command(string_register);
-    printf("%s\n",inputs[i]);
 
     switch(cmd) {
         case ARRIVE: {
@@ -436,7 +435,7 @@ void initiate(struct _INTERSECTION_ *junction) {
             return;
         }
     }
-    i++;
+    // i++;
     initiate(junction);
 
 
