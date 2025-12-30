@@ -44,12 +44,6 @@ struct _VEHICLE_ {
     unsigned int arrival_t;
     unsigned int final_t;
 
-    enum DIRECTION{
-        LEFT,
-        STRAIGHT,
-        RIGHT
-    }direction;
-
     enum VEHICLE_TYPE {
         CAR,
         BUS,
@@ -58,22 +52,24 @@ struct _VEHICLE_ {
 };
 
 struct _LANE_ {
-
+    int last_tick;
     struct _QUEUE_ *queue;
 };
 
 struct _INTERSECTION_ {
     int lane_x;
+    int starve_limit;
     struct _LANE_ *lanes[4];
     struct _STACK_ *emergency_lane;
     struct _LINKEDLIST_ *logs;
+    struct _PRIORITY_QUEUE_ *priority_q;
     enum SIGNAL_STRATEGY {
         ROUND_ROBIN,
         LENGTH_BASED,
     }strat;
 };
 
-
+// DIRI ANG CREATE VEHICLE FUNCTION!!!
 struct _VEHICLE_ *create_vehicle(unsigned int lane, char *id, enum VEHICLE_TYPE type, unsigned int a_t) {
     struct _VEHICLE_ *v = (struct _VEHICLE_*) malloc(sizeof(struct _VEHICLE_));
     v->id = id;
@@ -83,9 +79,10 @@ struct _VEHICLE_ *create_vehicle(unsigned int lane, char *id, enum VEHICLE_TYPE 
     return v;
 }
 
-
+// DIRI ANG CREATE LANE FUNCTION!!
 struct _LANE_ *create_lane() {
     struct _LANE_ *l = (struct _LANE_*) malloc(sizeof(struct _LANE_));
+    l->last_tick = 0;
     l->queue = create_queue();
     return l;
 }
@@ -98,7 +95,9 @@ struct _INTERSECTION_ *create_intersection() {
         s->lanes[i] = create_lane();
     }
     s->emergency_lane = create_stack();
+    s->priority_q = create_priority_queue();
     s->lane_x = 1;
+    s->starve_limit = 5;
     s->logs = create_list();
     return s;
 }
@@ -177,44 +176,91 @@ void display_vehicle(struct _VEHICLE_ *v) {
     printf("%s %d %d\n", v->id, v->lane, v->final_t);
 }
 
+void pass_vehicle(struct _INTERSECTION_ *intersection, struct _QUEUE_ *lane_q, struct _VEHICLE_ *v, int tick) {
+    v->final_t = tick;
+    intersection->lanes[intersection->lane_x - 1]->last_tick = tick;
+    add_element(intersection->logs,v);
+    dequeue(lane_q);
+
+}
+
 void round_robin(struct _INTERSECTION_ *junction, int tick) {
 
     int *x= &(junction->lane_x);
-
-    struct _QUEUE_ *lane = junction->lanes[(*x)-1]->queue;
-    display_queue(lane);
-    if(lane != NULL && lane->first!=NULL) {
-        struct _VEHICLE_ *v = (struct _VEHICLE_*) peek_q(lane);
+    struct _LANE_ *lane = junction->lanes[(*x)-1];
+    struct _QUEUE_ *lane_q = lane->queue;
+    
+    if(lane_q != NULL && lane_q->first!=NULL) {
+        struct _VEHICLE_ *v = (struct _VEHICLE_*) peek_q(lane_q);
         if(v->arrival_t <= tick) {
-            v->final_t = tick;
-
-            add_element(junction->logs, v);
-            dequeue(lane);
+            // v->final_t = tick;
+            // lane->last_tick = tick;
+            // add_element(junction->logs, v);
+            // dequeue(lane_q);
+            lane->last_tick = tick;
+            pass_vehicle(junction, lane_q, v, tick);
         }
-        
         
     }
     *x=(*x %= 4) + 1;
 }
 
+// void display_priority_queue(struct _PRIORITY_QUEUE_ *p_q) {
+//     struct _NODE_ *ptr = p_q->head;
+//     while(ptr!=NULL) {
+//         display_queue((struct _QUEUE_*)ptr->data);
+//         ptr=ptr->next;
+//     }
+//     printf("\n");
+// }
+
 void length_based(struct _INTERSECTION_ *junction, int tick) {
-    struct _PRIORITY_QUEUE_ *p_q = create_priority_queue();
-    for(int i=0; i<4;i++) {
-        if(junction->lanes[i]->queue->first != NULL)
-            push_pq(p_q, junction->lanes[i]->queue, junction->lanes[i]->queue->total_size);
+    struct _PRIORITY_QUEUE_ *p_q = junction->priority_q;
+    // for(int i=0; i<4;i++) {
+    //     struct _NODE_QUEUE_ *node_q = junction->lanes[i]->queue->first;
+    //     if(node_q != NULL) {
+    //         struct _VEHICLE_ *vehicle = (struct _VEHICLE_*)node_q->data;
+    //         if(vehicle->arrival_t <= tick) {
+    //             push_pq(p_q, junction->lanes[i], junction->lanes[i]->queue->total_size);
+    //         }
+    //     } 
+            
+    // }
+    // display_priority_queue(p_q);
+    
+
+    for(int i=0;i<4;i++) {
+        struct _LANE_ *p_lane = junction->lanes[i];
+        if(p_lane->queue->first!=NULL) {
+            struct _VEHICLE_ *v = (struct _VEHICLE_*)p_lane->queue->first->data;
+            if(v->arrival_t <= tick && tick - p_lane->last_tick >= junction->starve_limit) {
+                p_lane->last_tick = tick;
+                pass_vehicle(junction,p_lane->queue, v, tick);
+                return;
+            }
+        } 
     }
     if(p_q->head!=NULL) {
         
-        struct _QUEUE_ *q = (struct _QUEUE_*) peek_pq(p_q);
-
-        if (q->first!=NULL) {
-            struct _VEHICLE_ *v = (struct _VEHICLE_*) peek_q(q);
+        struct _LANE_ *lane = (struct _LANE_*) peek_pq(p_q);
+        if (lane->queue->first!=NULL) {
+            struct _VEHICLE_ *v = (struct _VEHICLE_*) peek_q(lane->queue);
             if(v->arrival_t <= tick) {
-                v->final_t = tick;
-                add_element(junction->logs, v);
-                dequeue(q);
+                lane->last_tick = tick;
+                pass_vehicle(junction, lane->queue, v, tick);
+            }else {
+                struct _NODE_ *ptr_pq = p_q->head->next;
+                while(ptr_pq!=NULL) {
+                    struct _LANE_ *temp_lane =(struct _LANE_*) ptr_pq->data;
+                    struct _VEHICLE_ *v = (struct _VEHICLE_*) temp_lane->queue->first->data;
+                    if(v->arrival_t <= tick) {
+                        temp_lane->last_tick = tick;
+                        pass_vehicle(junction, temp_lane->queue, v, tick);
+                        return;
+                    }
+                    ptr_pq = ptr_pq->next;
+                }
             }
-            
 
         }
         else {            
@@ -249,9 +295,62 @@ void simulate(struct _INTERSECTION_ *junction, enum SIGNAL_STRATEGY strategy, in
 
     }
 }
+int i=0;
+
+// char inputs[22][256] = {
+//     {"arrive 1 c1 car 0"},
+//     {"arrive 1 c2 car 1"},
+// {"arrive 2 c3 car 1"},
+// {"arrive 1 c4 car 3"},
+// {"arrive 1 c5 car 4"},
+// {"arrive 2 c6 car 5"},
+// {"arrive 3 c7 car 6"},
+// {"arrive 3 c8 car 8"},
+// {"arrive 3 c9 car 9"},
+// {"arrive 4 c10 car 10"},
+// {"set_signal_strategy length_based"},
+// {"tick 1"},
+// {"tick 2"},
+// {"tick 3"},
+// {"tick 4"},
+// {"tick 5"},
+// {"tick 6"},
+// {"tick 7"},
+// {"tick 8"},
+// {"tick 9"},
+// {"tick 10"},
+// {"end"},
+// };
+
+// char inputs[21][256] = {
+//     {"arrive 1 c1 car 0"},
+// {"arrive 2 c2 car 0"},
+// {"arrive 3 c3 car 0"},
+// {"arrive 4 c4 car 0"},
+// {"arrive 2 c5 car 1"},
+// {"arrive 1 c6 bus 2"},
+// {"arrive 1 c7 car 3"},
+// {"arrive 1 c8 car 5"},
+// {"arrive 1 c9 car 6"},
+// {"set_signal_strategy length_based"},
+// {"tick 1"},
+// {"tick 2"},
+// {"tick 3"},
+// {"tick 4"},
+// {"tick 5"},
+// {"tick 6"},
+// {"tick 7"},
+// {"tick 8"},
+// {"tick 9"},
+// {"tick 10"},
+// {"end"}
+// };
+
+
 
 void initiate(struct _INTERSECTION_ *junction) {
     char input[256];
+    // strcpy(input, inputs[i]);
     fgets(input, sizeof(input), stdin);
     input[strcspn(input, "\n")] = 0;
 
@@ -259,11 +358,11 @@ void initiate(struct _INTERSECTION_ *junction) {
     if(!string_register) return initiate(junction);
 
     enum COMMANDS cmd = str_to_command(string_register);
+    printf("%s\n",inputs[i]);
 
     switch(cmd) {
         case ARRIVE: {
             char **arrive_registers = verify_input(string_register, 4, "ARRIVE <Lane> <VehicleID> <Type> <t>");
-
             if(arrive_registers != NULL) {
                 int lane = atoi(arrive_registers[0]);
                 //RUN COMMAND IF INPUT CORRECT !
@@ -287,7 +386,15 @@ void initiate(struct _INTERSECTION_ *junction) {
             if(strategy_registers != NULL) {
                 //RUN COMMAND IF INPUT CORRECT !
                 junction->strat = str_to_strategy(strategy_registers[0]);
-                
+                if(junction->strat == LENGTH_BASED) {
+                    for(int i=0;i<4;i++) {
+                        struct _NODE_QUEUE_ *node_q = junction->lanes[i]->queue->first;
+                        if(node_q != NULL) {
+                            push_pq(junction->priority_q, junction->lanes[i], junction->lanes[i]->queue->total_size);
+                            
+                        }
+                    }
+                }
             }
             break;
         }
@@ -325,12 +432,13 @@ void initiate(struct _INTERSECTION_ *junction) {
             display_queue(junction->lanes[3]->queue);
         }
         case END: {
-            printf("\n");
             display_logs(junction->logs);
             return;
         }
     }
+    i++;
     initiate(junction);
+
 
 }
 
