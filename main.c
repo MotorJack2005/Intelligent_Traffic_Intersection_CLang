@@ -6,22 +6,6 @@
 #include "priority_queue.h"
 #include "linkedlist.h"
 
-
-// ░██████╗███████╗███╗░░██╗░█████╗░██████╗░░█████╗░░██████╗
-// ██╔════╝██╔════╝████╗░██║██╔══██╗██╔══██╗██╔══██╗██╔════╝
-// ╚█████╗░█████╗░░██╔██╗██║███████║██║░░██║██║░░██║╚█████╗░
-// ░╚═══██╗██╔══╝░░██║╚████║██╔══██║██║░░██║██║░░██║░╚═══██╗
-// ██████╔╝███████╗██║░╚███║██║░░██║██████╔╝╚█████╔╝██████╔╝
-// ╚═════╝░╚══════╝╚═╝░░╚══╝╚═╝░░╚═╝╚═════╝░░╚════╝░╚═════╝░
-
-// ███████╗███╗░░██╗████████╗███████╗██████╗░██████╗░██████╗░██╗░██████╗███████╗
-// ██╔════╝████╗░██║╚══██╔══╝██╔════╝██╔══██╗██╔══██╗██╔══██╗██║██╔════╝██╔════╝
-// █████╗░░██╔██╗██║░░░██║░░░█████╗░░██████╔╝██████╔╝██████╔╝██║╚█████╗░█████╗░░
-// ██╔══╝░░██║╚████║░░░██║░░░██╔══╝░░██╔══██╗██╔═══╝░██╔══██╗██║░╚═══██╗██╔══╝░░
-// ███████╗██║░╚███║░░░██║░░░███████╗██║░░██║██║░░░░░██║░░██║██║██████╔╝███████╗
-// ╚══════╝╚═╝░░╚══╝░░░╚═╝░░░╚══════╝╚═╝░░╚═╝╚═╝░░░░░╚═╝░░╚═╝╚═╝╚═════╝░╚══════╝
-
-
 enum COMMANDS {
     ARRIVE,
     SET_SIGNAL_STRATEGY,
@@ -193,10 +177,7 @@ void round_robin(struct _INTERSECTION_ *junction, int tick) {
     if(lane_q != NULL && lane_q->first!=NULL) {
         struct _VEHICLE_ *v = (struct _VEHICLE_*) peek_q(lane_q);
         if(v->arrival_t <= tick) {
-            // v->final_t = tick;
-            // lane->last_tick = tick;
-            // add_element(junction->logs, v);
-            // dequeue(lane_q);
+
             lane->last_tick = tick;
             pass_vehicle(junction, lane_q, v, tick);
         }
@@ -205,14 +186,6 @@ void round_robin(struct _INTERSECTION_ *junction, int tick) {
     *x=(*x %= 4) + 1;
 }
 
-// void display_priority_queue(struct _PRIORITY_QUEUE_ *p_q) {
-//     struct _NODE_ *ptr = p_q->head;
-//     while(ptr!=NULL) {
-//         display_queue((struct _QUEUE_*)ptr->data);
-//         ptr=ptr->next;
-//     }
-//     printf("\n");
-// }
 
 int waiting_time(struct _LANE_ *lane, int tick) {
     return tick - lane->last_tick;
@@ -298,97 +271,16 @@ void simulate(struct _INTERSECTION_ *junction, enum SIGNAL_STRATEGY strategy, in
 
     }
 }
-int i=0;
-
-// char inputs[22][256] = {
-//     {"arrive 1 c1 car 0"},
-//     {"arrive 1 c2 car 1"},
-// {"arrive 2 c3 car 1"},
-// {"arrive 1 c4 car 3"},
-// {"arrive 1 c5 car 4"},
-// {"arrive 2 c6 car 5"},
-// {"arrive 3 c7 car 6"},
-// {"arrive 3 c8 car 8"},
-// {"arrive 3 c9 car 9"},
-// {"arrive 4 c10 car 10"},
-// {"set_signal_strategy length_based"},
-// {"tick 1"},
-// {"tick 2"},
-// {"tick 3"},
-// {"tick 4"},
-// {"tick 5"},
-// {"tick 6"},
-// {"tick 7"},
-// {"tick 8"},
-// {"tick 9"},
-// {"tick 10"},
-// {"end"},
-// };
-
-// char inputs[21][256] = {
-//     {"arrive 1 c1 car 0"},
-// {"arrive 2 c2 car 0"},
-// {"arrive 3 c3 car 0"},
-// {"arrive 4 c4 car 0"},
-// {"arrive 2 c5 car 1"},
-// {"arrive 1 c6 bus 2"},
-// {"arrive 1 c7 car 3"},
-// {"arrive 1 c8 car 5"},
-// {"arrive 1 c9 car 6"},
-// {"set_signal_strategy length_based"},
-// {"tick 1"},
-// {"tick 2"},
-// {"tick 3"},
-// {"tick 4"},
-// {"tick 5"},
-// {"tick 6"},
-// {"tick 7"},
-// {"tick 8"},
-// {"tick 9"},
-// {"tick 10"},
-// {"end"}
-// };
-
-char inputs[26][256]= {
-    {"arrive 1 c1 car 0"},
-{"arrive 2 c2 car 0"},
-{"arrive 3 c3 car 0"},
-{"arrive 4 c31 car 0"},
-{"arrive 2 c4 car 1"},
-{"arrive 1 c5 bus 2"},
-{"arrive 1 c6 car 3"},
-{"arrive 3 e0 emergency 4"},
-{"arrive 1 c7 car 5"},
-{"arrive 1 c8 car 6"},
-{"arrive 4 e1 emergency 7"},
-{"arrive 2 e2 emergency 7"},
-{"set_signal_strategy length_based"},
-{"tick 0"},
-{"tick 1"},
-{"tick 2"},
-{"tick 3"},
-{"emergency_preempt e0 4"},
-{"tick 5"},
-{"tick 6"},
-{"emergency_preempt e2 7"},
-{"emergency_preempt e1 8"},
-{"tick 9"},
-{"tick 10"},
-{"tick 11"},
-{"end"}
-};
 
 void initiate(struct _INTERSECTION_ *junction) {
     char input[256];
-    strcpy(input, inputs[i]);
-    // fgets(input, sizeof(input), stdin);
+    fgets(input, sizeof(input), stdin);
     input[strcspn(input, "\n")] = 0;
 
     char *string_register = strtok(input," ");
     if(!string_register) return initiate(junction);
 
     enum COMMANDS cmd = str_to_command(string_register);
-    printf("%s\n", inputs[i]);
     switch(cmd) {
         case ARRIVE: {
             char **arrive_registers = verify_input(string_register, 4, "ARRIVE <Lane> <VehicleID> <Type> <t>");
@@ -465,36 +357,10 @@ void initiate(struct _INTERSECTION_ *junction) {
             return;
         }
     }
-    i++;
     initiate(junction);
 
 
 }
-
-
-
-// ⠀⠀⢀⣤⣶⣶⣤⣄⡀
-// ⠀⢀⣿⣿⣿⣿⣿⣿⣿⡆
-// ⠀⠸⣿⣿⣿⣿⣿⡟⡟⡗ ⣿⠉⣿⠉⣿⡏⠹⡏⢹⡏⢹⣿⣿⠉⣿⠉⣿⡟⢋⠛⣿⠉⡟⢉⡏⠹⠏⣹⣿
-// ⠀⠀⠙⠏⠯⠛⣉⢲⣧⠟ ⣿⠄⣿⠄⣿⡇⡄⠁⢸⡇⢸⣿⣿⠄⣿⠄⣿⠄⣿⣿⣿⠄⡀⢻⣿⡄⢠⣿⣿
-// ⠀⠀⠠⢭⣝⣾⠿⣴⣿⠇ ⣿⣦⣤⣴⣿⣧⣿⣤⣼⣧⣬⣭⣿⣦⣤⣴⣿⣧⣤⣤⣿⣤⣷⣤⣿⣧⣼⣿⣿
-// ⠀⠀⢐⣺⡿⠁⠀⠈⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀ ⣶⣶⣶⣶⣶⣶⠀
-// ⠀⠀⣚⣿⠃ ⣶⣶⣶⣶
-// ⢀⣿⣿⣿⣷⢒⣢⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣠⣶⣶⣄⠄
-// ⢰⣿⣿⡿⣿⣦⠬⢝⡄⠀⠀⠀⠀⠀⠀⢠⣿⠿⠿⠟⠛⠋⠁
-// ⠠⢿⣿⣷⠺⣿⣗⠒⠜⡄⠀⠀⠀⠀⣴⠟⠁
-// ⠀⣰⣿⣷⣍⡛⣯⣯⣙⡁⠀⠀⣠⡾⠁
-// ⠀⠨⢽⣿⣷⢍⣛⣶⢷⣼⣠⣾⠋
-// ⠀⠀⠘⢿⣿⣖⠬⣹⣶⣿⠟⠁
-// ⠀⠀⠀⠚⠿⠿⡒⠨⠛⠋
-// ⠀⠀⠀⠐⢒⣛⣷
-// ⠀⠀⠀⢘⣻⣭⣭
-// ⠀⠀⠀⡰⢚⣺⣿
-// ⠀⠀⢠⣿⣿⣿⣿⣦⡄
-// ⠀⠀⢸⡿⢿⣿⢿⡿⠃
-// ⠀⠀⠘⡇⣸⣿⣿⣿⣆
-// ⠀⠀⠀⠀⠸⣿⡿⠉⠁
-// ⠀⠀⠀⠀⠀⢿⡟
 
 int main() {
 
