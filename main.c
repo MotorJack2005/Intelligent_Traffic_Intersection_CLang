@@ -7,7 +7,7 @@
 #include "linkedlist.h"
 
 #define STARVE_LIMIT 5
-#define FIXED_TURN_NUMBER 1
+#define FIXED_TURN_NUMBER 3
 
 enum COMMANDS {
     ARRIVE,
@@ -183,12 +183,11 @@ void round_robin(struct _INTERSECTION_ *junction, int tick) {
     
     if(lane_q != NULL && lane_q->first!=NULL) {
         int i = 0;
-        while(lane_q->first !=NULL && i < FIXED_TURN_NUMBER) {
-            struct _VEHICLE_ *v = (struct _VEHICLE_*) peek_q(lane_q);
-            if(v->arrival_t <= tick) {
-                lane->last_tick = tick;
-                pass_vehicle(junction, lane_q, v, tick);
-            }
+        struct _VEHICLE_ *v = (struct _VEHICLE_*)peek_q(lane_q);
+        while(lane_q->first !=NULL && i < FIXED_TURN_NUMBER && v->arrival_t <= tick) {
+            v = (struct _VEHICLE_*) peek_q(lane_q);
+            lane->last_tick = tick;
+            pass_vehicle(junction, lane_q, v, tick);
             i++;
         }
         
@@ -202,9 +201,31 @@ int waiting_time(struct _LANE_ *lane, int tick) {
     return tick - lane->last_tick;
 }
 
-void length_based(struct _INTERSECTION_ *junction, int tick) {
-    struct _PRIORITY_QUEUE_ *p_q = junction->priority_q;
 
+void display_priority_queue(struct _PRIORITY_QUEUE_ *p_q) {
+
+    struct _NODE_ *ptr = p_q->head;
+    while(ptr!=NULL) {
+        display_queue((struct _QUEUE_*)ptr->data);
+        ptr=ptr->next;
+    }
+    printf("\n");
+}
+
+void length_based(struct _INTERSECTION_ *junction, int tick) {
+    struct _PRIORITY_QUEUE_ *p_q = create_priority_queue();
+    for(int i=0; i<4;i++) {
+        struct _NODE_QUEUE_ *node_q = junction->lanes[i]->queue->first;
+        if(node_q != NULL) {
+            struct _VEHICLE_ *vehicle = (struct _VEHICLE_*)node_q->data;
+            if(vehicle->arrival_t <= tick) {
+                push_pq(p_q, junction->lanes[i], junction->lanes[i]->queue->total_size);
+                display_queue(junction->lanes[i]->queue);
+            }
+        } 
+
+    }
+    
     struct _PRIORITY_QUEUE_ *starving_lane = create_priority_queue();
     for(int i=0;i<4;i++) {
         struct _LANE_ *p_lane = junction->lanes[i];
@@ -234,18 +255,24 @@ void length_based(struct _INTERSECTION_ *junction, int tick) {
         struct _NODE_ *ptr_pq = p_q->head;
         struct _LANE_ *lane = (struct _LANE_*) ptr_pq->data;          
 
-        while (lane->queue->first!=NULL) {
+        if (lane->queue->first!=NULL) {
             struct _VEHICLE_ *v = (struct _VEHICLE_*) peek_q(lane->queue);
             if(v->arrival_t <= tick) {
-                lane->last_tick = tick;
-                pass_vehicle(junction, lane->queue, v, tick);
+                while(lane->queue->first != NULL && v->arrival_t <= tick) {
+                    v = (struct _VEHICLE_*)peek_q(lane->queue);
+                    lane->last_tick = tick;
+                    pass_vehicle(junction, lane->queue, v, tick);
+                }
+                
             }else {
                 while(ptr_pq->next!=NULL) {
                     struct _LANE_ *temp_lane =(struct _LANE_*) ptr_pq->data;
                     struct _VEHICLE_ *v = (struct _VEHICLE_*) temp_lane->queue->first->data;
                     if(v->arrival_t <= tick) {
-                        temp_lane->last_tick = tick;
-                        pass_vehicle(junction, temp_lane->queue, v, tick);
+                        while(temp_lane->queue->first!=NULL && v->arrival_t <= tick) {
+                            temp_lane->last_tick = tick;
+                            pass_vehicle(junction, temp_lane->queue, v, tick);
+                        }
                         return;
                     }
                     ptr_pq = ptr_pq->next;
@@ -253,9 +280,8 @@ void length_based(struct _INTERSECTION_ *junction, int tick) {
                 }
             }
         }
-        if(lane->queue->first == NULL) {            
+        else {            
             pop_pq(p_q);
-            return;
         }   
    
     }
@@ -275,6 +301,7 @@ void display_logs(struct _LINKEDLIST_ *l) {
 
 void simulate(struct _INTERSECTION_ *junction, enum SIGNAL_STRATEGY strategy, int tick) {
     if(junction->last_preempt == tick) {
+        printf("TRIG\n");
         return;
     }
     switch(strategy) {
@@ -326,15 +353,15 @@ void initiate(struct _INTERSECTION_ *junction) {
             if(strategy_registers != NULL) {
                 //RUN COMMAND IF INPUT CORRECT !
                 junction->strat = str_to_strategy(strategy_registers[0]);
-                if(junction->strat == LENGTH_BASED) {
-                    for(int i=0;i<4;i++) {
-                        struct _NODE_QUEUE_ *node_q = junction->lanes[i]->queue->first;
-                        if(node_q != NULL) {
-                            push_pq(junction->priority_q, junction->lanes[i], junction->lanes[i]->queue->total_size);
+                // if(junction->strat == LENGTH_BASED) {
+                //     for(int i=0;i<4;i++) {
+                //         struct _NODE_QUEUE_ *node_q = junction->lanes[i]->queue->first;
+                //         if(node_q != NULL) {
+                //             push_pq(junction->priority_q, junction->lanes[i], junction->lanes[i]->queue->total_size);
                             
-                        }
-                    }
-                }
+                //         }
+                //     }
+                // }
             }
             break;
         }
