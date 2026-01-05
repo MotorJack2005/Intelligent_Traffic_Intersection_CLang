@@ -185,9 +185,13 @@ void round_robin(struct _INTERSECTION_ *junction, int tick) {
         int i = 0;
         struct _VEHICLE_ *v = (struct _VEHICLE_*)peek_q(lane_q);
         while(lane_q->first !=NULL && i < FIXED_TURN_NUMBER && v->arrival_t <= tick) {
-            v = (struct _VEHICLE_*) peek_q(lane_q);
+            
             lane->last_tick = tick;
             pass_vehicle(junction, lane_q, v, tick);
+            if(lane_q->first!=NULL) {
+                v = (struct _VEHICLE_*) peek_q(lane_q);
+            }
+            else break;
             i++;
         }
         
@@ -206,25 +210,15 @@ void display_priority_queue(struct _PRIORITY_QUEUE_ *p_q) {
 
     struct _NODE_ *ptr = p_q->head;
     while(ptr!=NULL) {
-        display_queue((struct _QUEUE_*)ptr->data);
+        struct _LANE_ *lane = (struct _LANE_*) ptr->data;
+        display_queue((struct _QUEUE_*)lane->queue);
         ptr=ptr->next;
     }
     printf("\n");
 }
 
 void length_based(struct _INTERSECTION_ *junction, int tick) {
-    struct _PRIORITY_QUEUE_ *p_q = create_priority_queue();
-    for(int i=0; i<4;i++) {
-        struct _NODE_QUEUE_ *node_q = junction->lanes[i]->queue->first;
-        if(node_q != NULL) {
-            struct _VEHICLE_ *vehicle = (struct _VEHICLE_*)node_q->data;
-            if(vehicle->arrival_t <= tick) {
-                push_pq(p_q, junction->lanes[i], junction->lanes[i]->queue->total_size);
-                display_queue(junction->lanes[i]->queue);
-            }
-        } 
-
-    }
+        struct _PRIORITY_QUEUE_ *p_q = junction->priority_q;
     
     struct _PRIORITY_QUEUE_ *starving_lane = create_priority_queue();
     for(int i=0;i<4;i++) {
@@ -239,8 +233,10 @@ void length_based(struct _INTERSECTION_ *junction, int tick) {
         }
         
     }
+
     if(starving_lane->head != NULL) {
         struct _LANE_ *temp = (struct _LANE_*) peek_pq(starving_lane);
+                display_priority_queue(p_q);
         
         while(temp->queue->first!= NULL) {
             struct _VEHICLE_ *v = (struct _VEHICLE_*) peek_q(temp->queue);
@@ -250,18 +246,18 @@ void length_based(struct _INTERSECTION_ *junction, int tick) {
         
         return;
     }
-
     if(p_q->head!=NULL) {
         struct _NODE_ *ptr_pq = p_q->head;
         struct _LANE_ *lane = (struct _LANE_*) ptr_pq->data;          
-
         if (lane->queue->first!=NULL) {
             struct _VEHICLE_ *v = (struct _VEHICLE_*) peek_q(lane->queue);
             if(v->arrival_t <= tick) {
-                while(lane->queue->first != NULL && v->arrival_t <= tick) {
-                    v = (struct _VEHICLE_*)peek_q(lane->queue);
+                while(v->arrival_t <= tick) {
                     lane->last_tick = tick;
                     pass_vehicle(junction, lane->queue, v, tick);
+                    if(lane->queue->first != NULL)
+                        v = (struct _VEHICLE_*)peek_q(lane->queue);
+                    else break;
                 }
                 
             }else {
@@ -269,19 +265,23 @@ void length_based(struct _INTERSECTION_ *junction, int tick) {
                     struct _LANE_ *temp_lane =(struct _LANE_*) ptr_pq->data;
                     struct _VEHICLE_ *v = (struct _VEHICLE_*) temp_lane->queue->first->data;
                     if(v->arrival_t <= tick) {
-                        while(temp_lane->queue->first!=NULL && v->arrival_t <= tick) {
+                        while(v->arrival_t <= tick) {
                             temp_lane->last_tick = tick;
                             pass_vehicle(junction, temp_lane->queue, v, tick);
+                            if(temp_lane->queue->first!=NULL)
+                                v = (struct _VEHICLE_*) peek_q(temp_lane->queue);
+                            else break;
+
                         }
                         return;
                     }
                     ptr_pq = ptr_pq->next;
-                    lane = (struct _LANE_*)ptr_pq->data;
                 }
             }
         }
         else {            
             pop_pq(p_q);
+            length_based(junction, tick);
         }   
    
     }
@@ -353,15 +353,15 @@ void initiate(struct _INTERSECTION_ *junction) {
             if(strategy_registers != NULL) {
                 //RUN COMMAND IF INPUT CORRECT !
                 junction->strat = str_to_strategy(strategy_registers[0]);
-                // if(junction->strat == LENGTH_BASED) {
-                //     for(int i=0;i<4;i++) {
-                //         struct _NODE_QUEUE_ *node_q = junction->lanes[i]->queue->first;
-                //         if(node_q != NULL) {
-                //             push_pq(junction->priority_q, junction->lanes[i], junction->lanes[i]->queue->total_size);
+                if(junction->strat == LENGTH_BASED) {
+                    for(int i=0;i<4;i++) {
+                        struct _NODE_QUEUE_ *node_q = junction->lanes[i]->queue->first;
+                        if(node_q != NULL) {
+                            push_pq(junction->priority_q, junction->lanes[i], junction->lanes[i]->queue->total_size);
                             
-                //         }
-                //     }
-                // }
+                        }
+                    }
+                }
             }
             break;
         }
